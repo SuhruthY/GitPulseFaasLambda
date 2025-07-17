@@ -1,0 +1,40 @@
+name: Delete Git Pulse Lambda
+
+on:
+  workflow_dispatch:
+    inputs:
+      function_name:
+        description: "Lambda Function Name (e.g., git-pulse-lambda-123456)"
+        required: true
+      role_name:
+        description: "IAM Role Name (e.g., git-pulse-role-123456)"
+        required: true
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Delete Lambda Function
+        run: |
+          echo "🗑️ Deleting Lambda: ${{ github.event.inputs.function_name }}"
+          aws lambda delete-function --function-name ${{ github.event.inputs.function_name }}
+
+      - name: Detach and Delete IAM Role
+        run: |
+          echo "🗑️ Detaching and Deleting IAM Role: ${{ github.event.inputs.role_name }}"
+          aws iam detach-role-policy \
+            --role-name ${{ github.event.inputs.role_name }} \
+            --policy-arn arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+          aws iam delete-role --role-name ${{ github.event.inputs.role_name }}
