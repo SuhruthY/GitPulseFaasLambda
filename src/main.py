@@ -6,17 +6,21 @@ from dotenv import load_dotenv
 from datetime import datetime
 import pytz
 
-# --- Set up logging to use IST for %(asctime)s) ---
+# --- IST Time Config for Logging ---
 IST = pytz.timezone('Asia/Kolkata')
-SLEEP = 60 * 3
+SLEEP = 60 * 3  # 3 minutes
 
 def ist_time(*args):
     return datetime.now(IST).timetuple()
 
 logging.Formatter.converter = ist_time
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M'
+)
 
-# --- Load environment variables ---
+# --- Load Environment Variables ---
 load_dotenv()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
@@ -75,16 +79,16 @@ def log_event(event):
         ref_name = payload.get("ref")
         logging.info(f"🔹 CreateEvent: {actor} created a new {ref_type} '{ref_name}' in {repo_name}")
 
-# --- Main polling loop ---
-def main():
-    logging.info("Starting GitHub event monitor...")
-    while True:
-        events = fetch_events()
-        if events:
-            logging.info(f"Fetched {len(events)} events. Showing last 10.")
-            for event in events[-10:]:  # Last 10 events
-                log_event(event)
-        time.sleep(SLEEP)
+# --- Lambda entry point ---
+def handle(event, context):
+    logging.info("GitHub Event Lambda triggered")
+    events = fetch_events()
+    if events:
+        logging.info(f"Fetched {len(events)} events. Showing last 10.")
+        for event in events[-10:]:  # Last 10 events
+            log_event(event)
+    return {"statusCode": 200, "body": "GitHub events logged."}
 
+# For local testing
 if __name__ == "__main__":
-    main()
+    handle(None, None)
